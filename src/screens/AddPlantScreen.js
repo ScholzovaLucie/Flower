@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, Image, Alert, ActivityIndicator,
@@ -8,14 +8,13 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlants } from '../context/PlantContext';
-import { identifyPlant } from '../services/aiService';
 
 const DAY_LABELS = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
 // Default order: Monday first
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 export default function AddPlantScreen({ navigation }) {
-  const { addPlant, settings } = usePlants();
+  const { addPlant } = usePlants();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -23,7 +22,6 @@ export default function AddPlantScreen({ navigation }) {
   const [scheduleType, setScheduleType] = useState('interval'); // 'interval' | 'days'
   const [wateringInterval, setWateringInterval] = useState('7');
   const [wateringDays, setWateringDays] = useState([1, 4]); // Mon + Thu by default
-  const [aiLoading, setAiLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const pickImage = async (fromCamera) => {
@@ -56,35 +54,6 @@ export default function AddPlantScreen({ navigation }) {
       { text: 'Galerie', onPress: () => pickImage(false) },
       { text: 'Zrušit', style: 'cancel' },
     ]);
-  };
-
-  const handleAiIdentify = async () => {
-    if (!photoUri) {
-      Alert.alert('Chybí fotka', 'Nejprve přidej fotku kytky.');
-      return;
-    }
-    if (!settings.apiKey) {
-      Alert.alert('Chybí API klíč', 'Pro AI rozpoznávání přidej Anthropic API klíč v Nastavení.');
-      return;
-    }
-
-    setAiLoading(true);
-    try {
-      const result = await identifyPlant(settings.apiKey, photoUri);
-      if (result.name) setName(result.name);
-      if (result.description || result.wateringTips) {
-        setDescription([result.description, result.wateringTips].filter(Boolean).join('\n\n'));
-      }
-      if (result.wateringIntervalDays && result.wateringIntervalDays >= 1) {
-        setScheduleType('interval');
-        setWateringInterval(String(result.wateringIntervalDays));
-      }
-      Alert.alert('✨ Kytka rozpoznána!', `Identifikována jako: ${result.name}${result.species ? ` (${result.species})` : ''}`);
-    } catch (e) {
-      Alert.alert('AI chyba', e.message || 'Nepodařilo se rozpoznat kytku. Zkontroluj API klíč a připojení.');
-    } finally {
-      setAiLoading(false);
-    }
   };
 
   const toggleDay = (day) => {
@@ -149,22 +118,6 @@ export default function AddPlantScreen({ navigation }) {
               )}
             </TouchableOpacity>
 
-            {photoUri && (
-              <TouchableOpacity
-                style={[styles.aiBtn, aiLoading && styles.aiBtnLoading]}
-                onPress={handleAiIdentify}
-                disabled={aiLoading}
-              >
-                {aiLoading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Ionicons name="sparkles" size={16} color="#fff" />
-                )}
-                <Text style={styles.aiBtnText}>
-                  {aiLoading ? 'Rozpoznávám...' : 'AI rozpoznání'}
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {/* Name */}
@@ -326,19 +279,6 @@ const styles = StyleSheet.create({
   photo: { width: '100%', height: '100%' },
   photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   photoHint: { fontSize: 14, color: '#81C784', fontWeight: '600' },
-  aiBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#7B1FA2',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginTop: 12,
-  },
-  aiBtnLoading: { backgroundColor: '#AB47BC' },
-  aiBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-
   field: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '700', color: '#2E7D32', marginBottom: 8 },
   input: {

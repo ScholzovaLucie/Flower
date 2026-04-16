@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, Image, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Modal,
-  SafeAreaView,
+  ScrollView, Alert, SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePlants, calculatePlantHealth, getNextWateringDate } from '../context/PlantContext';
-import { getPlantAdvice } from '../services/aiService';
 
 const DAY_NAMES = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
 
@@ -30,13 +28,9 @@ const formatDate = (dateStr) => {
 
 export default function PlantDetailScreen({ route, navigation }) {
   const { plantId } = route.params;
-  const { plants, waterPlant, removePlant, settings } = usePlants();
+  const { plants, waterPlant, removePlant } = usePlants();
 
   const plant = useMemo(() => plants.find((p) => p.id === plantId), [plants, plantId]);
-
-  const [aiAdvice, setAiAdvice] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiModalVisible, setAiModalVisible] = useState(false);
 
   if (!plant) {
     return (
@@ -83,30 +77,6 @@ export default function PlantDetailScreen({ route, navigation }) {
     );
   };
 
-  const handleAiAdvice = async () => {
-    if (!plant.photoUri) {
-      Alert.alert('Chybí fotka', 'Kytka nemá fotku. Uprav ji a přidej fotku.');
-      return;
-    }
-    if (!settings.apiKey) {
-      Alert.alert('Chybí API klíč', 'Nastav Anthropic API klíč v Nastavení.');
-      return;
-    }
-
-    setAiLoading(true);
-    setAiModalVisible(true);
-    setAiAdvice('');
-
-    try {
-      const advice = await getPlantAdvice(settings.apiKey, plant.photoUri, plant.name, plant.description);
-      setAiAdvice(advice);
-    } catch (e) {
-      setAiAdvice('Chyba: ' + (e.message || 'Nepodařilo se získat radu.'));
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   const scheduleText = plant.scheduleType === 'interval'
     ? `Každých ${plant.wateringInterval || 7} dní`
     : (plant.wateringDays || []).map((d) => DAY_NAMES[d]).join(', ') || 'Bez rozvrhu';
@@ -149,10 +119,6 @@ export default function PlantDetailScreen({ route, navigation }) {
           <TouchableOpacity style={styles.waterBtn} onPress={handleWater}>
             <Ionicons name="water" size={22} color="#fff" />
             <Text style={styles.waterBtnText}>Zalit teď!</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.aiBtn} onPress={handleAiAdvice}>
-            <Ionicons name="sparkles" size={20} color="#7B1FA2" />
-            <Text style={styles.aiBtnText}>AI rada</Text>
           </TouchableOpacity>
         </View>
 
@@ -209,28 +175,6 @@ export default function PlantDetailScreen({ route, navigation }) {
 
         <View style={{ height: 32 }} />
       </ScrollView>
-
-      {/* AI Advice Modal */}
-      <Modal visible={aiModalVisible} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={styles.modalSafe}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>✨ AI Rada pro {plant.name}</Text>
-            <TouchableOpacity onPress={() => setAiModalVisible(false)}>
-              <Ionicons name="close" size={26} color="#333" />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.modalBody}>
-            {aiLoading ? (
-              <View style={styles.modalLoading}>
-                <ActivityIndicator size="large" color="#7B1FA2" />
-                <Text style={styles.modalLoadingText}>AI analyzuje fotku...</Text>
-              </View>
-            ) : (
-              <Text style={styles.adviceText}>{aiAdvice}</Text>
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -301,19 +245,6 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   waterBtnText: { color: '#fff', fontSize: 17, fontWeight: '800' },
-  aiBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#F3E5F5',
-    borderRadius: 14,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: '#CE93D8',
-  },
-  aiBtnText: { color: '#7B1FA2', fontSize: 15, fontWeight: '700' },
 
   infoGrid: {
     flexDirection: 'row',
@@ -384,20 +315,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF5F5',
   },
   deleteBtnText: { color: '#E53935', fontWeight: '700', fontSize: 15 },
-
-  // Modal
-  modalSafe: { flex: 1, backgroundColor: '#fff' },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3E5F5',
-  },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#4A148C', flex: 1 },
-  modalBody: { flex: 1, padding: 20 },
-  modalLoading: { alignItems: 'center', gap: 16, paddingTop: 40 },
-  modalLoadingText: { fontSize: 15, color: '#78909C' },
-  adviceText: { fontSize: 15, lineHeight: 24, color: '#333' },
 });

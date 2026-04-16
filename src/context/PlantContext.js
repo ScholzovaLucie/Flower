@@ -98,7 +98,7 @@ export const needsWateringToday = (plant) => {
 
 export function PlantProvider({ children }) {
   const [plants, setPlants] = useState([]);
-  const [settings, setSettings] = useState({ apiKey: '', notificationHour: 8 });
+  const [settings, setSettings] = useState({ notificationHour: 8 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -32,9 +32,9 @@ export const saveSettings = async (settings) => {
 export const loadSettings = async () => {
   try {
     const data = await AsyncStorage.getItem(SETTINGS_KEY);
-    return data ? JSON.parse(data) : { apiKey: '', notificationHour: 8 };
+    return data ? JSON.parse(data) : { notificationHour: 8 };
   } catch (e) {
     console.error('Chyba při načítání nastavení:', e);
-    return { apiKey: '', notificationHour: 8 };
+    return { notificationHour: 8 };
   }
 };
